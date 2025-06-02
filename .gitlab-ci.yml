@@ -1,0 +1,425 @@
+### GENERAL INFORMATION
+# - "GITLAB_SERVER_TOKEN" must be defined in the environment variable within the gitlab project in order for the gitlab-runner to be able to push and tag the repo.
+# production server url depends on whether it is an external or an internal application
+
+variables:
+    # manual variables
+    APP_NAME: "best"
+    GIT_REPOSITORY: "dbfz-git01.leipzig.dbfz.de/datalab/team/best-app.git"
+    # deploy servers
+    STAGE_SERVER: "dlab-stage01.datalab.leipzig.dbfz.de"
+    DEVELOP_SERVER: "dlab-dev01.datalab.leipzig.dbfz.de"
+    PRODUCTION_SERVER: "dlab-extprod01.www-revproxy.dbfz.de"
+    PRODUCTION_SERVER_URL: "https://datalab.dbfz.de/"
+    # database urls
+    # TODO: needs to be adjusted
+    DB_URL_PREFIX: "postgres://"
+    DB_URL_SUFFIX: "?sslmode=no-verify"
+    DEVELOP_DB_SERVER: "dlab-devdb01.datalab.leipzig.dbfz.de"
+    PRODUCTION_DB_SERVER: "dlab-extdb01.www-revproxy.dbfz.de"
+    DEVELOP_DB_NAME: "resdb"
+    PRODUCTION_DB_NAME: "resdb"
+    DEVELOP_API_USER: "resdb_api_user"
+    PRODUCTION_API_USER: "resdb_api_user"
+    #
+    # automatic/predefined variables
+    GITLAB_RUNNER_HOME: "/home/gitlab-runner/"
+    NGINX_CONF_PATH: "${GITLAB_RUNNER_HOME}/nginx-sites-enabled/"
+    STAGE_APP_NAME: "${APP_NAME}_${CI_COMMIT_REF_SLUG}"
+    DEVELOP_APP_NAME: "${APP_NAME}"
+    PRODUCTION_APP_NAME: "${APP_NAME}"
+    STAGE_SERVER_URL: "https://${STAGE_SERVER}/"
+    DEVELOP_SERVER_URL: "https://${DEVELOP_SERVER}/"
+    INSTALL_PATH_ROOT: "${GITLAB_RUNNER_HOME}/apps/"
+    STAGE_BUILD_PATH: "stage-build"
+    DEVELOP_BUILD_PATH: "build"
+    PRODUCTION_BUILD_PATH: "build"
+    ACTIVE_SITES_SERVER: "dlab-dev01.datalab.leipzig.dbfz.de"
+    ACTIVE_SITES_PATH: "${GITLAB_RUNNER_HOME}/active-sites/individual/"
+
+cache:
+    key: node-cache-$CI_COMMIT_REF_SLUG
+    paths:
+        - node_modules/
+
+stages:
+    - check-version
+    - stage-build
+    - stage-deploy
+    - build
+    - deploy
+    - tag
+
+# The version check compares two version strings which are of semantic versioning style.
+# On develop branch the version has not to be chagned but will warn you taht the version is not newer than the current one.
+# MR to master/main will fail if the version number is not newer than the current one.
+.check_version: &check_version
+    stage: check-version
+    tags:
+        - general
+    # resource_group: server
+    script:
+        - git fetch
+        - cd client
+        - NEW_VERSION="v$(npm pkg get version | tr -d '"')"
+        - git checkout origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME -- package.json
+        - OLD_VERSION="v$(npm pkg get version | tr -d '"')"
+        - git checkout -- package.json
+        - |
+            case "$(../cicd/semver2/semver2.sh ${NEW_VERSION} ${OLD_VERSION})" in
+              "1" )
+                echo "Proposed version number ${NEW_VERSION} is newer than the current version number ${OLD_VERSION} and will be accepted." && exit 0  ;;
+              "0" )
+                echo "Proposed version number ${NEW_VERSION} is equal to the current version number ${OLD_VERSION}. Consider providing a newer version number." && exit 1 ;;
+              "-1" )
+                echo "Proposed version number ${NEW_VERSION} is older than the current version number ${OLD_VERSION}. Consider providing a newer version number." && exit 1 ;;
+            esac
+        - exit 1
+
+check-version-develop:
+    rules:
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /(develop)/'
+          when: always
+        - when: never
+    <<: *check_version
+    allow_failure: true
+
+check-version-production:
+    rules:
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /(master|main)/'
+          when: always
+        - when: never
+    <<: *check_version
+    allow_failure: true
+
+.build-script: &build-script # build client
+    - cd client
+    - npm config list
+    - npm install --verbose
+    # write the build date and branch state into a tmp file
+    - |
+        cat > src/build_params.json << EOF
+        {
+          "build_date": "$(date +%F)",
+          "develop_flag": $(if [[ $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ 'develop' ]]; then echo "true"; else echo "false"; fi)
+        }
+        EOF
+    # define variables for the build process
+    # - export VITE_GRAPHQL_URL=${SERVER_URL}/${FULL_APP_NAME}/server/graphql
+    - export VITE_BASENAME="/${FULL_APP_NAME}"
+    - export VITE_BUILD_PATH="${BUILD_PATH}"
+    - export VITE_PUBLIC_URL=.
+    - export PUBLIC_URL=.
+    - export CI=false
+    - echo $NODE_ENV
+    - echo $VITE_GRAPHQL_URL
+    - npm run build
+    - cd ..
+    # build server
+    # TDOD: uncomment
+    # - cd server
+    # - npm install --verbose
+    # - export PUBLIC_URL=.
+    # - export CI=false
+    # - npm run build
+    #
+
+stage-build:
+    stage: stage-build
+    tags:
+        - js
+    rules:
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /(develop|master|main)/'
+          when: always
+        - when: never
+    variables:
+        SERVER_URL: "${STAGE_SERVER_URL}"
+        FULL_APP_NAME: "${STAGE_APP_NAME}"
+        BUILD_PATH: "${STAGE_BUILD_PATH}"
+    script:
+        - pwd
+        # set variables
+        - echo $SERVER_URL
+        - echo $FULL_APP_NAME
+        - echo $BUILD_PATH
+        - *build-script
+    artifacts:
+        paths:
+            - client/${BUILD_PATH}/
+            # TODO: uncomment
+            # - server/node_modules/
+
+build:
+    stage: build
+    tags:
+        - js
+    rules:
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /develop/'
+          when: always
+          variables:
+              SERVER_URL: "${DEVELOP_SERVER_URL}"
+              FULL_APP_NAME: "${DEVELOP_APP_NAME}"
+              BUILD_PATH: "${DEVELOP_BUILD_PATH}"
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /master|main/'
+          when: always
+          variables:
+              SERVER_URL: "${PRODUCTION_SERVER_URL}"
+              FULL_APP_NAME: "${PRODUCTION_APP_NAME}"
+              BUILD_PATH: "${PRODUCTION_BUILD_PATH}"
+        - when: never
+    script:
+        - pwd
+        # set variables
+        - echo $SERVER_URL
+        - echo $FULL_APP_NAME
+        - echo $BUILD_PATH
+        - *build-script
+    artifacts:
+        paths:
+            - client/${BUILD_PATH}/
+            # TDOD: uncomment
+            # - server/node_modules/
+
+.deploy-script: &deploy-script # create directory
+    - ssh ${SERVER} "mkdir -p ${INSTALL_PATH}/"
+    # remove the previous backup
+    - ssh ${SERVER} "rm -rf ${INSTALL_PATH}_backup"
+    # backup current install path (just in case)
+    - ssh ${SERVER} "mv ${INSTALL_PATH} ${INSTALL_PATH}_backup"
+    # TDOD: uncomment:
+    # # create directory for server
+    # - ssh ${SERVER} "mkdir -p ${INSTALL_PATH}/server/"
+    # # copy server code
+    # - scp -r server ${SERVER}:"${INSTALL_PATH}"
+    #
+    # copy client build
+    - ssh ${SERVER} "mkdir -p ${INSTALL_PATH}/client/"
+    - scp -r client/${BUILD_PATH}/* ${SERVER}:"${INSTALL_PATH}/client/"
+    # delete the old app client and server with pm2
+    - ssh ${SERVER} "pm2 delete --silent ${FULL_APP_NAME} || ':'"
+    # TODO: uncomment
+    # - ssh ${SERVER} "pm2 delete --silent ${FULL_APP_NAME}_server || ':'"
+    #
+    # get client and server ports
+    # TODO: uncomment
+    # - SERVER_PORT=$(ssh ${SERVER} "bash -s" < cicd/get_free_port.sh 10000)
+    # - echo $SERVER_PORT
+    #
+    - CLIENT_PORT=$(ssh ${SERVER} "bash -s" < cicd/get_free_port.sh ${SERVER_PORT})
+    - echo $CLIENT_PORT
+    # generate nginx configs
+    # client
+    - |
+        cat > ${FULL_APP_NAME}_nginx.conf << EOF
+        location /${FULL_APP_NAME} {
+          proxy_pass http://localhost:${CLIENT_PORT}/;
+        }
+        EOF
+    # server
+    # TDOD: uncomment
+    # - |
+    #     cat > ${FULL_APP_NAME}_server_nginx.conf << EOF
+    #     location /${FULL_APP_NAME}/server/ {
+    #       proxy_pass http://localhost:${SERVER_PORT}/;
+    #     }
+    #     EOF
+    # create the nginx conf directory
+    #
+    - ssh ${SERVER} "mkdir -p ${NGINX_CONF_PATH}/"
+    # copy configs to server
+    - scp -r *_nginx.conf ${SERVER}:"${NGINX_CONF_PATH}/"
+    ### start the server
+    # TODO: uncomment
+    # - export GRAPHQL_URL_BASE="/${FULL_APP_NAME}/server/graphql"
+    # - export REACT_APP_GRAPHQL_URL=${SERVER_URL}/${FULL_APP_NAME}/server/graphql
+    # # start the server
+    # - ssh ${SERVER} "PORT=${SERVER_PORT} REACT_APP_GRAPHQL_URL=${REACT_APP_GRAPHQL_URL} GRAPHQL_URL_BASE=${GRAPHQL_URL_BASE} DATABASE_URL=${DATABASE_URL} ENABLE_GRAPHIQL=${ENABLE_GRAPHIQL} pm2 start npm --name ${FULL_APP_NAME}_server -- start --prefix '${INSTALL_PATH}/server/' index.js"
+    # - ssh ${SERVER} "pm2 logs --nostream ${FULL_APP_NAME}_server"
+    # - ssh ${SERVER} "pm2 --force save"
+    #
+    # client start
+    # --spa = single page app
+    - ssh ${SERVER} "pm2 serve --spa '/${INSTALL_PATH}/client' ${CLIENT_PORT} --name ${FULL_APP_NAME}"
+    - ssh ${SERVER} "pm2 logs --nostream ${FULL_APP_NAME}"
+    - ssh ${SERVER} "pm2 --force save"
+    # reload nginx
+    - ssh ${SERVER} "sudo /usr/sbin/service nginx reload"
+    ### add the site to the active sites directory
+    # get version number
+    - cd client
+    - NEW_VERSION="v$(npm pkg get version | tr -d '"')"
+    - cd ..
+    # define json
+    - |
+        cat > ${FULL_APP_NAME}_${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}.json << EOF
+        {
+          "type": "${DEPLOY_TYPE}",
+          "name": "${APP_NAME}",
+          "build_date": "$(date +%F)",
+          "version": "${NEW_VERSION}",
+          "url": "https://${SERVER}/${FULL_APP_NAME}",
+          "git": "https://${GIT_REPOSITORY}",
+          "target": "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}",
+          "source": "${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME}"
+        }
+        EOF
+    # create directory
+    - ssh ${ACTIVE_SITES_SERVER} "mkdir -p ${ACTIVE_SITES_PATH}/"
+    # copy json to server
+    - scp -r ${FULL_APP_NAME}_${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}.json ${ACTIVE_SITES_SERVER}:"${ACTIVE_SITES_PATH}/"
+    # update active-sites.json
+    - ssh ${ACTIVE_SITES_SERVER} "jq -s '.' ${ACTIVE_SITES_PATH}/*.json > ${ACTIVE_SITES_PATH}/../active-sites.json"
+
+stage-deploy:
+    stage: stage-deploy
+    tags:
+        - general
+    rules:
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /develop/'
+          when: always
+        # TODO: uncommit
+        #   variables:
+        #       DATABASE_URL: "${DB_URL_PREFIX}${DEVELOP_API_USER}:${DEVELOP_API_USER_PASSWORD}@${DEVELOP_DB_SERVER}/${DEVELOP_DB_NAME}${DB_URL_SUFFIX}"
+        # - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /master|main/'
+        #   when: always
+        #   variables:
+        #       DATABASE_URL: "${DB_URL_PREFIX}${PRODUCTION_API_USER}:${PRODUCTION_API_USER_PASSWORD}@${PRODUCTION_DB_SERVER}/${PRODUCTION_DB_NAME}${DB_URL_SUFFIX}"
+        #
+        - when: never
+    resource_group: stage-server # ensures that no two pipelines execute the job simultaneously
+    variables:
+        BUILD_PATH: "${STAGE_BUILD_PATH}"
+        INSTALL_PATH: "${INSTALL_PATH_ROOT}/${APP_NAME}/${CI_COMMIT_REF_SLUG}"
+        SERVER: "${STAGE_SERVER}"
+        FULL_APP_NAME: "${STAGE_APP_NAME}"
+        DEPLOY_TYPE: "stage"
+        # TODO: uncomment
+        # ENABLE_GRAPHIQL: "TRUE"
+        #
+    script:
+        - echo $BUILD_PATH
+        - echo $INSTALL_PATH
+        - echo $SERVER
+        - echo $FULL_APP_NAME
+        - echo $DATABASE_URL
+        - echo $DEPLOY_TYPE
+        - *deploy-script
+    environment:
+        name: stage/${STAGE_APP_NAME}
+        url: ${STAGE_SERVER_URL}${STAGE_APP_NAME}
+        on_stop: stage-stop
+
+deploy:
+    stage: deploy
+    tags:
+        - general
+    rules:
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /develop/'
+          when: manual
+          variables:
+              BUILD_PATH: "${DEVELOP_BUILD_PATH}"
+              SERVER: "${DEVELOP_SERVER}"
+              FULL_APP_NAME: "${DEVELOP_APP_NAME}"
+              DATABASE_URL: "${DB_URL_PREFIX}${DEVELOP_API_USER}:${DEVELOP_API_USER_PASSWORD}@${DEVELOP_DB_SERVER}/${DEVELOP_DB_NAME}${DB_URL_SUFFIX}"
+              INSTALL_PATH: "${INSTALL_PATH_ROOT}/${APP_NAME}"
+              DEPLOY_TYPE: "develop"
+              # TODO: uncomment
+              # ENABLE_GRAPHIQL: "TRUE"
+              #
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /master|main/'
+          when: manual
+          variables:
+              BUILD_PATH: "${PRODUCTION_BUILD_PATH}"
+              SERVER: "${PRODUCTION_SERVER}"
+              FULL_APP_NAME: "${PRODUCTION_APP_NAME}"
+              DATABASE_URL: "${DB_URL_PREFIX}${PRODUCTION_API_USER}:${PRODUCTION_API_USER_PASSWORD}@${PRODUCTION_DB_SERVER}/${PRODUCTION_DB_NAME}${DB_URL_SUFFIX}"
+              INSTALL_PATH: "${INSTALL_PATH_ROOT}/${APP_NAME}"
+              DEPLOY_TYPE: "main"
+              # TODO: uncomment
+              # ENABLE_GRAPHIQL: "FALSE"
+              #
+        - when: never
+    resource_group: server # ensures that no two pipelines execute the job simultaneously
+    script:
+        - echo $BUILD_PATH
+        - echo $INSTALL_PATH
+        - echo $SERVER
+        - echo $FULL_APP_NAME
+        - echo $DATABASE_URL
+        - echo $DEPLOY_TYPE
+        - *deploy-script
+
+stage-stop:
+    stage: stage-deploy
+    tags:
+        - general
+    rules:
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /(develop|master|main)/'
+          when: manual
+        - when: never
+    resource_group: stage-server # ensures that no two pipelines execute the job simultaneously
+    script:
+        - SERVER=${STAGE_SERVER}
+        # delete the old app client and server with pm2
+        - ssh ${SERVER} "pm2 delete --silent ${STAGE_APP_NAME} || ':'"
+        # TODO: uncomment
+        # - ssh ${SERVER} "pm2 delete --silent ${STAGE_APP_NAME}_server || ':'"
+        #
+        - ssh ${SERVER} "pm2 --force save"
+        # remove nginx configs
+        - ssh ${SERVER} "rm -rf ${NGINX_CONF_PATH}/${STAGE_APP_NAME}*"
+        # reload nginx
+        - ssh ${SERVER} "sudo /usr/sbin/service nginx reload"
+        # remove the active sites json file
+        - ssh ${ACTIVE_SITES_SERVER} "rm -f ${ACTIVE_SITES_PATH}/${STAGE_APP_NAME}_${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}.json"
+        # update active-sites.json
+        - ssh ${ACTIVE_SITES_SERVER} "jq -s '.' ${ACTIVE_SITES_PATH}/*.json > ${ACTIVE_SITES_PATH}/../active-sites.json"
+    when: manual
+    environment:
+        name: stage/${STAGE_APP_NAME}
+        action: stop
+
+# update changelog and add version tag and push
+tag-and-generate-changelog:
+    stage: tag
+    tags:
+        - general
+    rules:
+        - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_TAG'
+          when: never
+        - if: '$CI_COMMIT_MESSAGE =~ /\[CICD\]/'
+          when: never
+        - if: "$CI_COMMIT_BRANCH =~ /(develop)/ "
+          when: always
+        - when: never
+    resource_group: server # ensures that no two pipelines execute the job simultaneously
+    script:
+        # checkout the current branch
+        - pwd
+        - echo "${CI_COMMIT_AUTHOR}"
+        - echo "${CI_COMMIT_BRANCH}"
+        - cd client
+        - NEW_VERSION="v$(npm pkg get version | tr -d '"')"
+        - cd ..
+        - echo "${NEW_VERSION}"
+        - git remote remove origin
+        - git remote add origin "https://oauth2:${GITLAB_SERVER_TOKEN}@${GIT_REPOSITORY}"
+        - git fetch
+        - git fetch --prune --prune-tags
+        - git checkout $CI_COMMIT_BRANCH
+        - git pull origin $CI_COMMIT_BRANCH
+        # generate a new tag if not already present
+        # after the changelog is generated, move the tag one commit further, so that the tag is on the changelog-update commit
+        - |
+            if [ $(git tag -l "${NEW_VERSION}") ]; then
+              cicd/update_changelog.sh $CI_COMMIT_BRANCH
+              git add CHANGELOG.md
+              git commit -m "[CICD] changelog update" || ':'
+            else
+              git tag -m "[CICD] automatic version tagging" "${NEW_VERSION}"
+              cicd/update_changelog.sh $CI_COMMIT_BRANCH
+              git add CHANGELOG.md
+              git commit -m "[CICD] release ${NEW_VERSION} and changelog update" || ':'
+              git tag -f -m "[CICD] automatic version tagging" "${NEW_VERSION}"
+            fi
+        - git push --force origin $CI_COMMIT_BRANCH --tags
