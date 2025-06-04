@@ -1,0 +1,97 @@
+.react-flow__node {
+  font-size: 21px;
+  box-sizing: border-box;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  cursor: pointer;
+}
+
+.produkte-node,
+.mix-node,
+.komponenten-node,
+.prozessketten-node,
+.versorgungsaufgaben-node,
+.versorgungskonzepte-node {
+  font-weight: bold;
+  color: rgba(53, 48, 48, 0.801);
+  border-radius: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.226);
+  padding: 10px 20px;
+}
+
+.circle-node {
+  font-size: 18px;
+  background-color: #e6f0ea;
+  border-radius: 50%;
+  border: 2px solid rgba(175, 171, 171, 0.226);
+  padding: 10px;
+  color: grey;
+  font-weight: bold;
+}
+
+.produkte-node {
+  background-color: lightgreen;
+}
+
+.komponenten-node {
+  background-color: lightblue;
+}
+
+.mix-node {
+  background-color: pink;
+}
+
+.prozessketten-node {
+  background-color: mediumpurple;
+  color: white;
+}
+
+.versorgungsaufgaben-node {
+  background-color: orange;
+}
+
+.versorgungskonzepte-node {
+  background-color: khaki;
+
+}
+
+.circle-node .react-flow__node-label,
+.produkte-node .react-flow__node-label,
+.komponenten-node .react-flow__node-label,
+.mix-node .react-flow__node-label,
+.prozessketten-node .react-flow__node-label,
+.versorgungsaufgaben-node .react-flow__node-label,
+.versorgungskonzepte-node .react-flow__node-label {
+  white-space: pre-wrap; /* Zeilenumbruch bei langen Texten */
+}
+
+.diagram-reactflow-container {
+  height: 600px;
+  width: 100%;
+  border: 1px solid #ddd;
+  background-color: #f9f9f9;
+  position: relative;
+  /* Oft nützlich für untergeordnete Elemente wie Controls oder Minimap */
+}
+
+
+.diagram-loading-overlay {
+  position: absolute; /* Positioniert das Overlay über dem gesamten Container */
+  top: 0;
+  left: 0;
+  width: 100%; /* Nimmt die volle Breite des diagram-reactflow-container ein */
+  height: 100%; /* Nimmt die volle Höhe des diagram-reactflow-container ein */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(249, 249, 249, 0.9); /* Hintergrund des Overlays */
+  z-index: 10; /* Stellt sicher, dass das Overlay über anderen Elementen im Container liegt */
+}
+
+.loading-text {
+  font-style: italic;
+  color: #777;
+  font-size: 1.2em;
+}
