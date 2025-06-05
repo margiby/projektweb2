@@ -2,8 +2,8 @@ import { registerVSKSubdiagram } from "./versorgungskonzepte";
 import { registerKomponentenSubdiagram } from "./komponenten";
 
 export function registerAllSubdiagrams(): void {
-  console.log("REGISTERING: Sub-Diagrams...");
+  console.log("STARTE REGISTRIERUNG aller Sub-Diagramme...");
   registerVSKSubdiagram();
   registerKomponentenSubdiagram();
-  console.log("REGISTERED: Sub-Diagrams.");
+  console.log("ABGESCHLOSSEN: Registrierung aller Sub-Diagramme.");
 }

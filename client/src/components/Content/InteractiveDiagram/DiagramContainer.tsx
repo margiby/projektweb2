@@ -29,15 +29,22 @@ const DiagramView = (): ReactElement => {
       </h3>
       <p className="title is-5 has-text-centered">
         {diagramId === "root" ? "Hauptdiagramm" : `Subdiagramm: ${diagramId}`}
-        </p>
-         {/* Zurück-Schaltfläche */}
+      </p>
+      {/* Zurück-Schaltfläche */}
       {diagramId !== "root" && (
         <div className="has-text-right">
-          <button 
-          type="button"
-          aria-label="Zurück zur Übersicht"
-          className="button is-small is-light" onClick={() => setDiagramId("root")}>
-            🔙 Zurück zur Übersicht
+          <button
+            type="button"
+            aria-label="Zurück zur Übersicht"
+            className="button is-light"
+            onClick={() => setDiagramId("root")}
+          >
+            <p>
+              <FormattedMessage
+                id="diagram_back_button"
+                defaultMessage="🔙 Zurück zur Übersicht"
+              />
+            </p>
           </button>
         </div>
       )}
@@ -53,7 +60,12 @@ const DiagramView = (): ReactElement => {
       >
         {/* Bedingtes Rendering: Zeige Lade-Text oder das Diagramm */}
         {!hasLayouted ? (
-          <p className="loading-text">Layout wird berechnet...</p>
+          <p className="loading-text">
+            <FormattedMessage
+              id="diagram_loading"
+              defaultMessage="Layout wird berechnet..."
+            />
+          </p>
         ) : (
           <ReactFlow
             nodes={nodes}
@@ -65,7 +77,8 @@ const DiagramView = (): ReactElement => {
             // fitView // Sorgt dafür, dass das Diagramm initial eingepasst wird (kann auch über Hook gesteuert werden)
             attributionPosition="bottom-right" // Position der React Flow Attribution
           >
-            <Background /> {/*  Hintergrund des Diagramms (z.B. Punkte oder Linien) */}
+            <Background />{" "}
+            {/*  Hintergrund des Diagramms (z.B. Punkte oder Linien) */}
             <Controls /> {/* Steuerelemente für Zoom und Navigation */}
             <MiniMap /> {/* Kleine Übersichtskarte des Diagramms */}
           </ReactFlow>

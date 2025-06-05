@@ -1,45 +1,27 @@
 /* Für das TECH4BIOWASTE Diagramm (Versorgungskonzepte) */
-.tech-logo-node {
-  background-color: #2F552F;
-  color: white;
-  border-radius: 8px; 
-  padding: 15px 20px; 
-  font-size: 20px; 
-  border: 1px solid #2A5D2A; 
-  font-weight: bold;
+/* .tech-logo-node.react-flow__node { 
+    background-color: #166534; 
+    color: #ffffff; 
+    font-weight: bold;
+    border-radius: 8px; 
+    padding: 15px 20px;
+    border-color: #14532d; 
 }
 
-.tech-category-node { /* Für Feedstocks, Technologies, Products */
-  background-color: #A9D08E; 
-  color: #353030; 
-  border: 1px solid #70AD47; 
-  border-radius: 12px; 
-  padding: 10px 15px;
-  font-weight: bold;
+.tech-category-node.react-flow__node {
+    background-color: #bbf7d0; 
+    border-color: #4ade80; 
+    color: #14532d; 
+    font-weight: bold;
+    border-radius: 8px;
+    padding: 10px 15px;
 }
 
-.tech-item-node { /* Für die untergeordneten Elemente wie Food Waste, Pre-processing etc. */
-  background-color: #E2EFDA;
-  color: #353030;
-  border: 1px solid #A9D08E;
-  border-radius: 12px;
-  padding: 8px 12px;
-  font-size: 18px;
-}
-
-
-.tech-category-node.tech-feedstocks {
-  background-color: #A9D08E; 
-}
-.tech-category-node.technologies {
-  background-color: #A9D08E; 
-}
-.tech-category-node.tech-products {
-  background-color: #A9D08E; 
-}
-
-.tech-logo-node .react-flow__node-label,
-.tech-category-node .react-flow__node-label,
-.tech-item-node .react-flow__node-label {
-  white-space: pre-wrap;
-}
+.tech-item-node.react-flow__node {
+    background-color: #f0fdf4; 
+    border-color: #a7f3d0; 
+    color: #166534; 
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 1rem;
+} */

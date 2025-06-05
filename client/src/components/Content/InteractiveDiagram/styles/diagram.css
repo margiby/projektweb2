@@ -1,12 +1,27 @@
 .react-flow__node {
   font-size: 21px;
   box-sizing: border-box;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   text-align: center;
   align-items: center;
   justify-content: center;
   display: flex;
   cursor: pointer;
+  border-style: solid;
+  border-width: 3px;
 }
+.react-flow__node:hover {
+  box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+  color: rgb(24, 87, 86);
+  
+}
+.react-flow__node-label {
+  font-weight: bold;
+  color: rgba(53, 48, 48, 0.801);
+  text-align: center;
+  padding: 10px;
+}
+
 
 .produkte-node,
 .mix-node,
@@ -17,44 +32,54 @@
   font-weight: bold;
   color: rgba(53, 48, 48, 0.801);
   border-radius: 20px;
-  border: 2px solid rgba(0, 0, 0, 0.226);
   padding: 10px 20px;
 }
 
 .circle-node {
   font-size: 18px;
-  background-color: #e6f0ea;
+  background-color: #edf1ee;
+  border-color: #b6d4c1;
+  color: #6b8570;
   border-radius: 50%;
-  border: 2px solid rgba(175, 171, 171, 0.226);
   padding: 10px;
-  color: grey;
   font-weight: bold;
 }
 
 .produkte-node {
-  background-color: lightgreen;
+background-color: #f7fee7; 
+  border-color: #a3e635; 
+  color: #4d7c0f;  
 }
 
 .komponenten-node {
-  background-color: lightblue;
+  background-color: #e0f2fe; 
+  border-color: #7dd3fc;
+  color: #075985;      
 }
 
 .mix-node {
-  background-color: pink;
+   background-color: #ffe4e6; 
+  border-color: #fda4af; 
+  color: #9f1239;
 }
 
 .prozessketten-node {
-  background-color: mediumpurple;
-  color: white;
+   background-color: #e0e7ff; 
+  border-color: #a5b4fc;
+  color: #3730a3; 
 }
 
 .versorgungsaufgaben-node {
-  background-color: orange;
+  background-color: #fef3c7;
+  border-color: #fcd34d; 
+  color: #92400e;      
 }
 
 .versorgungskonzepte-node {
-  background-color: khaki;
-
+      background-color: #d1fae5; 
+  border-color: #6ee7b7; 
+  color: #065f46; 
+       
 }
 
 .circle-node .react-flow__node-label,
@@ -81,12 +106,12 @@
   position: absolute; /* Positioniert das Overlay über dem gesamten Container */
   top: 0;
   left: 0;
-  width: 100%; /* Nimmt die volle Breite des diagram-reactflow-container ein */
-  height: 100%; /* Nimmt die volle Höhe des diagram-reactflow-container ein */
+  width: 100%; 
+  height: 100%; 
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(249, 249, 249, 0.9); /* Hintergrund des Overlays */
+  background-color: rgba(249, 249, 249, 0.9);
   z-index: 10; /* Stellt sicher, dass das Overlay über anderen Elementen im Container liegt */
 }
 
@@ -95,3 +120,16 @@
   color: #777;
   font-size: 1.2em;
 }
+
+.react-flow__controls {
+    box-shadow: 0 2px 3px rgba(10, 10, 10, 0.1), 0 0 0 1px rgba(10, 10, 10, 0.1);
+    border-radius: 4px;
+}
+.react-flow__controls button {
+    background-color: #fff;
+    border-bottom: 1px solid #dbdbdb;
+}
+.react-flow__controls button:hover {
+    background-color: #f5f5f5;
+}
+

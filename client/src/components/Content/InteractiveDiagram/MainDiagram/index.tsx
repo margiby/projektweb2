@@ -1,15 +1,18 @@
-import { createSubDiagram } from "../diagrammHooks/diagramRegistry";
-import { initialNodes } from "../data/nodes";
-import { initialEdges } from "../data/edges";
+import { createDiagram, tryRegisterDiagram } from "../utils/diagramRegistry";
+import { initialNodes } from "./nodesMain";
+import { initialEdges } from "./edgesMain";
 
 export function registerMain(): void {
   // Hauptdiagramm unter dem Schlüssel "root"
-  console.log("REGISTERING: Main Diagram (root)...");
-  // Überprüfen, ob initialNodes und initialEdges definiert sind
-  if (initialNodes && initialEdges) {
-    createSubDiagram("root", initialNodes, initialEdges);
-  } else {
-    console.error("[MainDiagram] initialNodes oder initialEdges sind nicht verfügbar!");
-  }
-  console.log("REGISTERED: Main Diagram (root).");
+  tryRegisterDiagram("root", () => {
+    console.log("AKTION: Registriere Main Diagram (root)...");
+
+// Wir rufen keine elKOptions auf, weil es wird schon die Standartwerte benutzen.
+    if (initialNodes && initialEdges) {
+      createDiagram("root", initialNodes, initialEdges);
+      // Die Erfolgsmeldung kommt dann von createDiagram.
+    } else {
+      console.error("[MainDiagram/index.tsx] initialNodes oder initialEdges sind nicht verfügbar!");
+    }
+  });
 }

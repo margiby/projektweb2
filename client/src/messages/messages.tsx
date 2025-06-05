@@ -42,6 +42,8 @@ const lang: LanguageData = {
   ],
   diagram_title: ["Datenübersicht", "Data Overview"],
   diagram_loading: ["Layout wird berechnet...", "Calculating layout..."],
+  diagram_initializing: ["Diagramm wird initialisiert...","Diagram is initializing..."],
+  diagram_back_button: ["🔙 Zurück zur Übersicht", "🔙 Back to overview"],
 
   // Footer spezifische Texte
   footer_version: ["Version", "Version"],
@@ -50,7 +52,6 @@ const lang: LanguageData = {
   footer_privacy: ["Datenschutz", "Privacy Policy"],
   footer_contact_us: ["Kontakt", "Contact Us"],
   footer_contact_page: ["Kontaktseite", "Contact Page"],
-
 };
 
 const de: LanguageObj = {};

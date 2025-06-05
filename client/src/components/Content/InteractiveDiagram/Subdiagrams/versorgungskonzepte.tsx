@@ -1,53 +1,72 @@
-import { createTreeDiagram } from "../diagrammHooks/subdiagramFactory";
-import type { TreeFactoryNodeConfig, TreeFactoryOptions } from "../data/flow-types";
+import { tryRegisterDiagram } from "../utils/diagramRegistry";
+import { createTreeDiagram } from "../utils/diagramFactory";
+import type {
+  TreeFactoryNodeConfig,
+  TreeFactoryOptions,
+} from "../data/flow-types";
+import type { ElkLayoutOptions } from "../utils/ElkLayout-utils";
 
 export function registerVSKSubdiagram() {
-  const tech4BiowasteTree: TreeFactoryNodeConfig = {
-    id: "tech4biowaste-main", 
-    type: "default", 
-    className: "tech-logo-node",
-    data: { label: "TECH4\nBIOWASTE" },
-    children: [
-      {
-        id: "feedstocks",
-        className: "tech-category-node tech-feedstocks",
-        data: { label: "Feedstocks" },
-        children: [
-          { id: "food-waste", data: { label: "Food waste" }, className: "tech-item-node tech-feedstocks-item" },
-          { id: "garden-park-waste", data: { label: "Garden and park waste" }, className: "tech-item-node tech-feedstocks-item" },
-        ],
-      },
-      {
-        id: "technologies",
-        className: "tech-category-node tech-technologies",
-        data: { label: "Technologies" },
-        children: [
-          { id: "pre-processing", data: { label: "Pre-processing" }, className: "tech-item-node technologies-item" },
-          { id: "conversion", data: { label: "Conversion" }, className: "tech-item-node technologies-item" },
-          { id: "post-processing", data: { label: "Post-processing" }, className: "tech-item-node technologies-item" },
-          { id: "pilot-demo", data: { label: "Pilot and demo facilities" }, className: "tech-item-node technologies-item" },
-        ],
-      },
-      {
-        id: "products",
-        className: "tech-category-node tech-products",
-        data: { label: "Products" },
-        children: [
-          { id: "chemicals", data: { label: "Chemicals" }, className: "tech-item-node tech-products-item" },
-          { id: "energy-fuels", data: { label: "Energy and fuels" }, className: "tech-item-node tech-products-item" },
-          { id: "food-ingredients", data: { label: "Food ingredients" }, className: "tech-item-node tech-products-item" },
-          { id: "materials", data: { label: "Materials" }, className: "tech-item-node tech-products-item" },
-        ],
-      },
-    ],
-  };
+  const diagramId = "versorgungskonzepte";
+  tryRegisterDiagram(diagramId, () => {
+    console.log(`AKTION: Registriere VSK Diagram (${diagramId})...`);
 
-  const options: TreeFactoryOptions = {
-    nodeIdPrefix: "vsk-tree", // Eindeutiger Präfix für automatisch generierte IDs in diesem Baum
-    // defaultClassName und defaultNodeType können hier gesetzt werden, wenn die TreeNodeConfig sie nicht überschreibt
-  };
+    const tech4BiowasteTree: TreeFactoryNodeConfig = {
+      id: "tech4biowaste-main",
+      data: { label: "TECH4\nBIOWASTE" },
+      children: [
+        {
+          id: "feedstocks",
+          data: { label: "Feedstocks" },
+          children: [
+            { id: "food-waste", data: { label: "Food waste" } },
+            {
+              id: "garden-park-waste",
+              data: { label: "Garden and park waste" },
+            },
+          ],
+        },
+        {
+          id: "technologies",
+          data: { label: "Technologies" },
+          children: [
+            { id: "pre-processing", data: { label: "Pre-processing" } },
+            { id: "conversion", data: { label: "Conversion" } },
+            { id: "post-processing", data: { label: "Post-processing" } },
+            { id: "pilot-demo", data: { label: "Pilot and demo facilities" } },
+          ],
+        },
+        {
+          id: "products",
+          data: { label: "Products" },
+          children: [
+            { id: "chemicals", data: { label: "Chemicals" } },
+            { id: "energy-fuels", data: { label: "Energy and fuels" } },
+            { id: "food-ingredients", data: { label: "Food ingredients" } },
+            { id: "materials", data: { label: "Materials" } },
+          ],
+        },
+      ],
+    };
 
-  // Registriere dieses Diagramm unter der ID "versorgungskonzepte"
-  createTreeDiagram("versorgungskonzepte", tech4BiowasteTree, options);
-  console.log('Subdiagramm "versorgungskonzepte" registriert.');
+    // Definiere die spezifischen ELK-Optionen
+    const vskElkOptions: ElkLayoutOptions = {
+      "elk.algorithm": "layered",
+      "elk.direction": "RIGHT",
+      "org.eclipse.elk.edgeRouting": "ORTHOGONAL", // Wichtig für saubere Kantenführung
+      "org.eclipse.elk.layered.spacing.nodeNodeBetweenLayers": "80", // Abstand zwischen den "Ebenen"
+      "org.eclipse.elk.spacing.nodeNode": "30", // Abstand zwischen Knoten auf derselben Ebene
+      "org.eclipse.elk.layered.considerModelOrder.strategy": "PORTS_EAST_WEST",
+      "org.eclipse.elk.portConstraints": "FIXED_SIDE",
+    };
+
+    const options: TreeFactoryOptions = {
+      nodeIdPrefix: "vsk-tree",
+      defaultClassName: "versorgungskonzepte-node",
+      elkOptions: vskElkOptions,
+    };
+
+    createTreeDiagram(diagramId, tech4BiowasteTree, options);
+    // Die Erfolgsmeldung kommt von createTreeDiagram bzw. createDiagram
+  });
 }

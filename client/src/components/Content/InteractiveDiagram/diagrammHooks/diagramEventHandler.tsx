@@ -2,7 +2,7 @@ import { MouseEvent } from "react";
 import type { Node } from "@xyflow/react";
 import type { DiagramNode } from "../data/flow-types";
 import { useDiagramStore } from "./useDiagramStore";
-import { diagramRegistry } from "./diagramRegistry";
+import { diagramRegistry } from "../utils/diagramRegistry";
 
 /**
  * Handler-Funktion für Node-Klicks im Diagramm
@@ -20,6 +20,6 @@ const diagramId = node.id;
   if (diagramRegistry[diagramId]) {
     useDiagramStore.getState().setDiagramId(diagramId);
   } else {
-    console.log("Kein Subdiagramm für:", diagramId);
+    console.log("Kein Diagramm für:", diagramId);
   }
 }

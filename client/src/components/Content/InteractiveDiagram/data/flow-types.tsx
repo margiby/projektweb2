@@ -1,4 +1,10 @@
 import type { Node, Edge } from '@xyflow/react';
+import type { ElkLayoutOptions } from '../utils/ElkLayout-utils'; 
+
+export type NodeDimensions = { 
+  width: number;
+  height: number;
+};
 
 // Daten, die jeder Knoten enthalten kann
 export type NodeData = {
@@ -23,4 +29,5 @@ export type TreeFactoryOptions = {
   defaultClassName?: string;
   nodeIdPrefix?: string;
   defaultNodeType?: string;
+  elkOptions?: ElkLayoutOptions;
   }
